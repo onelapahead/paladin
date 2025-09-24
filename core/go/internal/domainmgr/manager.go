@@ -22,26 +22,26 @@ import (
 
 	_ "embed"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/i18n"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/components"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/filters"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/blockindexer"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/components"
-	"github.com/kaleido-io/paladin/core/internal/filters"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/core/pkg/blockindexer"
 
-	"github.com/kaleido-io/paladin/common/go/pkg/log"
-	"github.com/kaleido-io/paladin/core/pkg/ethclient"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/cache"
-	"github.com/kaleido-io/paladin/toolkit/pkg/inflight"
-	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
-	"github.com/kaleido-io/paladin/toolkit/pkg/signerapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/ethclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldtypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/query"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/cache"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/inflight"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/plugintk"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcserver"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/signerapi"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +50,7 @@ var iPaladinContractRegistryBuildJSON []byte
 
 var iPaladinContractRegistryABI = mustParseEmbeddedBuildABI(iPaladinContractRegistryBuildJSON)
 
+//nolint:unused // Used in tests
 var eventSig_PaladinRegisterSmartContract_V0 = mustParseEventSignatureHash(iPaladinContractRegistryABI, "PaladinRegisterSmartContract_V0")
 var eventSolSig_PaladinRegisterSmartContract_V0 = mustParseEventSoliditySignature(iPaladinContractRegistryABI, "PaladinRegisterSmartContract_V0")
 
@@ -61,6 +62,7 @@ var smartContractFilters = filters.FieldMap{
 }
 
 func NewDomainManager(bgCtx context.Context, conf *pldconf.DomainManagerConfig) components.DomainManager {
+	bgCtx = log.WithComponent(bgCtx, "domainmanager")
 	allDomains := []string{}
 	for name := range conf.Domains {
 		allDomains = append(allDomains, name)
@@ -209,6 +211,7 @@ func (dm *domainManager) registerDomain(name string, toDomain components.DomainM
 
 // fails if domain is not yet initialized (note external endpoints of Paladin do not open up until all domains initialized)
 func (dm *domainManager) GetDomainByName(ctx context.Context, name string) (components.Domain, error) {
+	ctx = log.WithComponent(ctx, "domainmanager")
 	domain, err := dm.getDomainByName(ctx, name)
 	if err != nil {
 		return nil, err
@@ -232,6 +235,7 @@ func (dm *domainManager) getDomainByName(ctx context.Context, name string) (*dom
 func (dm *domainManager) ExecDeployAndWait(ctx context.Context, txID uuid.UUID, call func() error) (dc components.DomainSmartContract, err error) {
 	// Waits for the event that confirms a smart contract has been deployed (or a context timeout)
 	// using the transaction ID of the deploy transaction
+	ctx = log.WithComponent(ctx, "domainmanager")
 	req := dm.privateTxWaiter.AddInflight(ctx, txID)
 	defer req.Cancel()
 	log.L(ctx).Infof("Added waiter %s for private deployment TransactionID %s", req.ID(), txID)
@@ -265,6 +269,7 @@ func (dm *domainManager) waitForDeploy(ctx context.Context, req *inflight.Inflig
 func (dm *domainManager) ExecAndWaitTransaction(ctx context.Context, txID uuid.UUID, call func() error) error {
 	// Waits for the event that confirms a transaction has been processed (or a context timeout)
 	// using the ID of the transaction
+	ctx = log.WithComponent(ctx, "domainmanager")
 	req := dm.privateTxWaiter.AddInflight(ctx, txID)
 	defer req.Cancel()
 	log.L(ctx).Infof("Added waiter %s for private TransactionID %s", req.ID(), txID)
@@ -301,6 +306,7 @@ func (dm *domainManager) getDomainByAddressOrNil(addr *pldtypes.EthAddress) *dom
 }
 
 func (dm *domainManager) GetSmartContractByAddress(ctx context.Context, dbTX persistence.DBTX, addr pldtypes.EthAddress) (components.DomainSmartContract, error) {
+	ctx = log.WithComponent(ctx, "domainmanager")
 	loadResult, dc, err := dm.getSmartContractCached(ctx, dbTX, addr)
 	if dc != nil || err != nil {
 		return dc, err
@@ -410,6 +416,7 @@ func mustParseEventSoliditySignature(a abi.ABI, eventName string) string {
 	return solString
 }
 
+//nolint:unused // Used in tests
 func mustParseEventSignatureHash(a abi.ABI, eventName string) pldtypes.Bytes32 {
 	event := a.Events()[eventName]
 	if event == nil {

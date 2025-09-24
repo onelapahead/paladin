@@ -22,16 +22,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/i18n"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/components"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
 	"github.com/google/uuid"
-	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
-	"github.com/kaleido-io/paladin/core/internal/components"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
 
-	"github.com/kaleido-io/paladin/common/go/pkg/log"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
-	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldtypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/prototk"
 	"google.golang.org/grpc"
 )
 
@@ -80,7 +80,7 @@ func NewPluginManager(bgCtx context.Context,
 	conf *pldconf.PluginManagerConfig) components.PluginManager {
 
 	pc := &pluginManager{
-		bgCtx: bgCtx,
+		bgCtx: log.WithComponent(bgCtx, log.Component("pluginmanager")),
 
 		grpcTarget:      grpcTarget,
 		loaderID:        loaderID,
@@ -246,6 +246,7 @@ func (pm *pluginManager) ReloadPluginList() (err error) {
 }
 
 func (pm *pluginManager) WaitForInit(ctx context.Context, pluginType prototk.PluginInfo_PluginType) error {
+	ctx = log.WithComponent(ctx, log.Component("pluginmanager"))
 	for {
 		switch pluginType {
 		case prototk.PluginInfo_DOMAIN:

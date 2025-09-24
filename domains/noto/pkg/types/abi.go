@@ -18,10 +18,9 @@ package types
 import (
 	_ "embed"
 
-	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/solutils"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldtypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/solutils"
 )
 
 //go:embed abis/INotoPrivate.json
@@ -30,6 +29,8 @@ var notoPrivateJSON []byte
 var NotoABI = solutils.MustParseBuildABI(notoPrivateJSON)
 
 type ConstructorParams struct {
+	Name           string      `json:"name,omitempty"`           // Name of the token
+	Symbol         string      `json:"symbol,omitempty"`         // Symbol of the token
 	Notary         string      `json:"notary"`                   // Lookup string for the notary identity
 	NotaryMode     NotaryMode  `json:"notaryMode"`               // Notary mode (basic or hooks)
 	Implementation string      `json:"implementation,omitempty"` // Use a specific implementation of Noto that was registered to the factory (blank to use default)
@@ -60,13 +61,26 @@ type MintParams struct {
 	Data   pldtypes.HexBytes    `json:"data"`
 }
 
+type BurnParams struct {
+	Amount *pldtypes.HexUint256 `json:"amount"`
+	Data   pldtypes.HexBytes    `json:"data"`
+}
+
+type BurnFromParams struct {
+	From   string               `json:"from"`
+	Amount *pldtypes.HexUint256 `json:"amount"`
+	Data   pldtypes.HexBytes    `json:"data"`
+}
+
 type TransferParams struct {
 	To     string               `json:"to"`
 	Amount *pldtypes.HexUint256 `json:"amount"`
 	Data   pldtypes.HexBytes    `json:"data"`
 }
 
-type BurnParams struct {
+type TransferFromParams struct {
+	From   string               `json:"from"`
+	To     string               `json:"to"`
 	Amount *pldtypes.HexUint256 `json:"amount"`
 	Data   pldtypes.HexBytes    `json:"data"`
 }
@@ -109,21 +123,6 @@ type UnlockPublicParams struct {
 	Outputs       []string          `json:"outputs"`
 	Signature     pldtypes.HexBytes `json:"signature"`
 	Data          pldtypes.HexBytes `json:"data"`
-}
-
-type ApproveExtraParams struct {
-	Data pldtypes.HexBytes `json:"data"`
-}
-
-type NotoPublicTransaction struct {
-	FunctionABI *abi.Entry        `json:"functionABI"`
-	ParamsJSON  pldtypes.RawJSON  `json:"paramsJSON"`
-	EncodedCall pldtypes.HexBytes `json:"encodedCall"`
-}
-
-type NotoTransferMetadata struct {
-	ApprovalParams       ApproveExtraParams    `json:"approvalParams"`       // Partial set of params that can be passed to the "approveTransfer" method to approve another party to perform this transfer
-	TransferWithApproval NotoPublicTransaction `json:"transferWithApproval"` // The public transaction that would need to be submitted by an approved party to perform this transfer
 }
 
 type BalanceOfParam struct {

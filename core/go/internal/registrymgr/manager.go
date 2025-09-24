@@ -19,20 +19,20 @@ import (
 	"context"
 	"sync"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/i18n"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/components"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/registrymgr/metrics"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/blockindexer"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
 	"github.com/google/uuid"
-	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/components"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/core/internal/registrymgr/metrics"
-	"github.com/kaleido-io/paladin/core/pkg/blockindexer"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
 
-	"github.com/kaleido-io/paladin/common/go/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/cache"
-	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/cache"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/plugintk"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcserver"
 )
 
 type registryManager struct {
@@ -59,7 +59,7 @@ type registryManager struct {
 
 func NewRegistryManager(bgCtx context.Context, conf *pldconf.RegistryManagerConfig) components.RegistryManager {
 	return &registryManager{
-		bgCtx:                    bgCtx,
+		bgCtx:                    log.WithComponent(bgCtx, "registrymanager"),
 		conf:                     conf,
 		registriesByID:           make(map[uuid.UUID]*registry),
 		registriesByName:         make(map[string]*registry),
@@ -153,6 +153,7 @@ func (rm *registryManager) RegistryRegistered(name string, id uuid.UUID, toRegis
 }
 
 func (rm *registryManager) GetRegistry(ctx context.Context, name string) (components.Registry, error) {
+	ctx = log.WithComponent(ctx, "registrymanager")
 	rm.mux.Lock()
 	defer rm.mux.Unlock()
 
@@ -175,6 +176,7 @@ func (rm *registryManager) getRegistryNames() []string {
 }
 
 func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) ([]*components.RegistryNodeTransportEntry, error) {
+	ctx = log.WithComponent(ctx, "registrymanager")
 	// Check cache
 	transports, present := rm.transportDetailsCache.Get(node)
 	if present {

@@ -11,6 +11,8 @@ export const notoConstructorABI = (
 ): ethers.JsonFragment => ({
   type: "constructor",
   inputs: [
+    { name: "name", type: "string" },
+    { name: "symbol", type: "string" },
     { name: "notary", type: "string" },
     { name: "notaryMode", type: "string" },
     {
@@ -58,6 +60,12 @@ export interface IGroupInfo {
 }
 
 export interface NotoConstructorParams {
+  // Added in NotoFactory V1 (will be ignored in V0)
+  name?: string;
+
+  // Added in NotoFactory V1 (will be ignored in V0)
+  symbol?: string;
+
   notary: PaladinVerifier;
   notaryMode: "basic" | "hooks";
   options?: {
@@ -80,22 +88,28 @@ export interface NotoMintParams {
   data: string;
 }
 
+export interface NotoBurnParams {
+  amount: string | number;
+  data: string;
+}
+
+export interface NotoBurnFromParams {
+  from: PaladinVerifier;
+  amount: string | number;
+  data: string;
+}
+
 export interface NotoTransferParams {
   to: PaladinVerifier;
   amount: string | number;
   data: string;
 }
 
-export interface NotoBurnParams {
+export interface NotoTransferFromParams {
+  from: PaladinVerifier;
+  to: PaladinVerifier;
   amount: string | number;
   data: string;
-}
-
-export interface NotoApproveTransferParams {
-  inputs: IStateEncoded[];
-  outputs: IStateEncoded[];
-  data: string;
-  delegate: string;
 }
 
 export interface NotoLockParams {
@@ -161,7 +175,7 @@ export class NotoFactory {
   newNoto(from: PaladinVerifier, data: NotoConstructorParams) {
     return new NotoFuture(
       this.paladin,
-      this.paladin.sendTransaction({
+      this.paladin.ptx.sendTransaction({
         type: TransactionType.PRIVATE,
         domain: this.domain,
         abi: [notoConstructorABI(!!data.options?.hooks)],
@@ -169,6 +183,8 @@ export class NotoFactory {
         from: from.lookup,
         data: {
           ...data,
+          name: data.name ?? "",
+          symbol: data.symbol ?? "",
           notary: data.notary.lookup,
           options: {
             basic: {
@@ -229,6 +245,24 @@ export class NotoInstance {
     );
   }
 
+  transferFrom(from: PaladinVerifier, data: NotoTransferFromParams) {
+    return new TransactionFuture(
+      this.paladin,
+      this.paladin.sendTransaction({
+        type: TransactionType.PRIVATE,
+        abi: notoPrivateJSON.abi,
+        function: "transferFrom",
+        to: this.address,
+        from: from.lookup,
+        data: {
+          ...data,
+          from: data.from.lookup,
+          to: data.to.lookup,
+        },
+      })
+    );
+  }
+
   prepareTransfer(from: PaladinVerifier, data: NotoTransferParams) {
     return this.paladin.prepareTransaction({
       type: TransactionType.PRIVATE,
@@ -243,20 +277,6 @@ export class NotoInstance {
     });
   }
 
-  approveTransfer(from: PaladinVerifier, data: NotoApproveTransferParams) {
-    return new TransactionFuture(
-      this.paladin,
-      this.paladin.sendTransaction({
-        type: TransactionType.PRIVATE,
-        abi: notoPrivateJSON.abi,
-        function: "approveTransfer",
-        to: this.address,
-        from: from.lookup,
-        data,
-      })
-    );
-  }
-
   burn(from: PaladinVerifier, data: NotoBurnParams) {
     return new TransactionFuture(
       this.paladin,
@@ -267,6 +287,23 @@ export class NotoInstance {
         to: this.address,
         from: from.lookup,
         data,
+      })
+    );
+  }
+
+  burnFrom(from: PaladinVerifier, data: NotoBurnFromParams) {
+    return new TransactionFuture(
+      this.paladin,
+      this.paladin.sendTransaction({
+        type: TransactionType.PRIVATE,
+        abi: notoPrivateJSON.abi,
+        function: "burnFrom",
+        to: this.address,
+        from: from.lookup,
+        data: {
+          ...data,
+          from: data.from.lookup,
+        }
       })
     );
   }

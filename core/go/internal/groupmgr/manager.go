@@ -21,23 +21,24 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/components"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/filters"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/components"
-	"github.com/kaleido-io/paladin/core/internal/filters"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/query"
-	"github.com/kaleido-io/paladin/sdk/go/pkg/retry"
-	"github.com/kaleido-io/paladin/toolkit/pkg/cache"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/i18n"
+	"github.com/LF-Decentralized-Trust-labs/paladin/common/go/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/pldtypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/query"
+	"github.com/LF-Decentralized-Trust-labs/paladin/sdk/go/pkg/retry"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/cache"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcserver"
 )
 
 var groupDBOnlyFilters = filters.FieldMap{
@@ -118,7 +119,7 @@ func NewGroupManager(bgCtx context.Context, conf *pldconf.GroupManagerConfig) co
 	}
 	gm.messagesInit()
 	gm.rpcEventStreams = newRPCEventStreams(gm)
-	gm.bgCtx, gm.cancelCtx = context.WithCancel(bgCtx)
+	gm.bgCtx, gm.cancelCtx = context.WithCancel(log.WithComponent(bgCtx, log.Component("groupmanager")))
 	return gm
 }
 
@@ -247,6 +248,7 @@ func (gm *groupManager) validateGroupGenesisSet(ctx context.Context, domainName 
 }
 
 func (gm *groupManager) CreateGroup(ctx context.Context, dbTX persistence.DBTX, spec *pldapi.PrivacyGroupInput) (group *pldapi.PrivacyGroup, err error) {
+	ctx = log.WithComponent(ctx, log.Component("groupmanager"))
 	pgGenesis := &pldapi.PrivacyGroupGenesisState{
 		GenesisSalt: pldtypes.RandBytes32(),
 		Name:        spec.Name,
@@ -350,7 +352,7 @@ func (gm *groupManager) CreateGroup(ctx context.Context, dbTX persistence.DBTX, 
 }
 
 func (gm *groupManager) StoreReceivedGroup(ctx context.Context, dbTX persistence.DBTX, domainName string, tx uuid.UUID, state *pldapi.State) (rejectionErr, err error) {
-
+	ctx = log.WithComponent(ctx, log.Component("groupmanager"))
 	var pgGenesis pldapi.PrivacyGroupGenesisState
 	if err := json.Unmarshal(state.Data, &pgGenesis); err != nil {
 		return nil, i18n.WrapError(ctx, err, msgs.MsgPGroupsReceivedGenesisInvalid)
@@ -419,6 +421,7 @@ func (dbPG *persistedGroup) mapToAPI() *pldapi.PrivacyGroup {
 }
 
 func (gm *groupManager) GetGroupByID(ctx context.Context, dbTX persistence.DBTX, domainName string, groupID pldtypes.HexBytes) (*pldapi.PrivacyGroup, error) {
+	ctx = log.WithComponent(ctx, log.Component("groupmanager"))
 	groupIDStr := fmt.Sprintf("%s:%s", domainName, groupID.String())
 	pg, found := gm.deployedPGCache.Get(groupIDStr)
 	if found {
@@ -475,6 +478,7 @@ func (gm *groupManager) queryGroupsCommon(ctx context.Context, dbTX persistence.
 }
 
 func (gm *groupManager) QueryGroups(ctx context.Context, dbTX persistence.DBTX, jq *query.QueryJSON) ([]*pldapi.PrivacyGroup, error) {
+	ctx = log.WithComponent(ctx, log.Component("groupmanager"))
 	return gm.queryGroupsCommon(ctx, dbTX, jq)
 }
 
