@@ -11,10 +11,10 @@ import {IPaladinContractRegistry_V0} from "../interfaces/IPaladinContractRegistr
 contract NotoFactory is Ownable, IPaladinContractRegistry_V0 {
     mapping(string => address) internal implementations;
 
-    Noto implementation = new Noto();
+    Noto _implementation = new Noto();
 
     constructor() Ownable(_msgSender()) {
-        implementations["default"] = address(implementation);
+        implementations["default"] = address(_implementation);
     }
 
     /**
