@@ -62,7 +62,7 @@ async function main(): Promise<boolean> {
 
   // Wait for deployment receipt
   const deploymentReceipt = await paladin.pollForReceipt(deploymentTxID, 10000);
-  if (!deploymentReceipt.success) {
+  if (!deploymentReceipt?.success) {
     logger.error("Deployment transaction failed!");
     return false;
   }

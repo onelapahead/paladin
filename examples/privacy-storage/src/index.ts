@@ -15,12 +15,11 @@
 import PaladinClient, {
   PenteFactory,
 } from "@lfdecentralizedtrust-labs/paladin-sdk";
-import { checkDeploy } from "paladin-example-common";
+import * as fs from 'fs';
+import { checkDeploy, nodeConnections } from "paladin-example-common";
+import * as path from 'path';
 import storageJson from "./abis/Storage.json";
 import { PrivateStorage } from "./helpers/storage";
-import * as fs from 'fs';
-import * as path from 'path';
-import { nodeConnections } from "paladin-example-common";
 
 const logger = console;
 
@@ -76,7 +75,7 @@ async function main(): Promise<boolean> {
     abi: storageJson.abi,
     bytecode: storageJson.bytecode,
     from: verifierNode1.lookup,
-  }).waitForDeploy();
+  }).waitForDeploy(30000); // up to 30s
   if (!contractAddress) {
     logger.error("Failed to deploy the contract. No address returned.");
     return false;
